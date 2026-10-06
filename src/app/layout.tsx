@@ -5,7 +5,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
   title: 'RFO Fizika — Azərbaycan Fizika Olimpiadasına Hazırlıq',
-  description: 'RFO Fizika hazırlığı üçün vahid platforma - Azerbaycanın ən yaxşı gənc fizikləri üçün məsələlər, kitablar, resurslar və süni intellekt dəstəyi.',
+  description: 'RFO Fizika hazırlığı üçün vahid platforma - Azerbaycanın ən yaxşı gənc fizikələri üçün məsələlər, kitablar, resurslar və süni intellekt dəstəyi.',
 };
 
 export default function RootLayout({

@@ -1,0 +1,2 @@
+-- This file has been replaced by prisma/seed.ts
+-- Please use "npm run prisma:seed" to seed the database

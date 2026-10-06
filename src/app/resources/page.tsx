@@ -1,10 +1,104 @@
+"use client";
+
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import { BrandLogo } from "@/components/BrandLogo"
+
+type ResourceCard = {
+  id: string
+  title: string
+  description: string | null
+  category: string
+  level: string
+  resourceType: string
+  year: number | null
+}
+
 export default function ResourcesPage() {
+  const [resources, setResources] = useState<ResourceCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState({
+    category: "",
+    level: "",
+    resourceType: "",
+    search: "",
+  });
+
+  // Handle filter changes
+  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setLoading(true);
+    setError(null);
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Handle search input
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLoading(true);
+    setError(null);
+    setFilters(prev => ({ ...prev, search: e.target.value }));
+  };
+
+  // Refetch when filters change
+  useEffect(() => {
+    let active = true;
+    const queryParams = new URLSearchParams();
+    if (filters.category) queryParams.append("category", filters.category);
+    if (filters.level) queryParams.append("level", filters.level);
+    if (filters.resourceType) queryParams.append("resourceType", filters.resourceType);
+    if (filters.search) queryParams.append("search", filters.search);
+
+    fetch(`/api/resources?${queryParams.toString()}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed to fetch resources");
+        return response.json();
+      })
+      .then((data) => {
+        if (active) setResources(data);
+      })
+      .catch((reason: unknown) => {
+        if (!active) return;
+        setError("Failed to load resources");
+        console.error(reason);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [filters.category, filters.level, filters.resourceType, filters.search]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900">Yüklənir...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900">Xəta</h2>
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
+              <BrandLogo imageClassName="h-8 w-8" />
               <button className="text-gray-600 hover:text-gray-900">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"></path>
@@ -13,7 +107,7 @@ export default function ResourcesPage() {
               <h1 className="text-xl font-bold text-gray-800">Resurslar Kitabxanası</h1>
             </div>
             <div className="hidden md:flex items-center space-x-6 text-gray-600">
-              <a href="/" className="hover:text-gray-900 transition-colors">Ana səhifə</a>
+              <Link href="/" className="hover:text-gray-900 transition-colors">Ana səhifə</Link>
               <a href="/junior" className="hover:text-gray-900 transition-colors">Junior</a>
               <a href="/senior" className="hover:text-gray-900 transition-colors">Senior</a>
             </div>
@@ -27,7 +121,7 @@ export default function ResourcesPage() {
             Resurslar Kitabxanası
           </h1>
           <p className="text-lg text-gray-600 mb-8">
-            Fizika kitablari, problem toplusu, lecture notes və Digər təhsil resursları
+            Fizika kitabları, məsələ topluları, mühazirə qeydləri və digər təhsil resursları
           </p>
         </div>
       </header>
@@ -40,7 +134,9 @@ export default function ResourcesPage() {
               <div className="relative w-full md:w-64">
                 <input
                   type="text"
-                  placeholder="Axtarış... kitab adı, müvuzə və s."
+                  placeholder="Axtarış... kitab adı, mövzu və s."
+                  value={filters.search}
+                  onChange={handleSearchChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
@@ -50,27 +146,43 @@ export default function ResourcesPage() {
                 </div>
               </div>
               <div className="flex-1 md:w-auto space-x-4">
-                <select className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">Mövzu seçin</option>
+                <select
+                  name="category"
+                  value={filters.category}
+                  onChange={handleFilterChange}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Kateqorija seçin</option>
                   <option value="mexanika">Mexanika</option>
                   <option value="elektrik">Elektrik</option>
                   <option value="termodinamika">Termodinamika</option>
                   <option value="optika">Optika</option>
                   <option value="maqnetizm">Maqnetizm</option>
                 </select>
-                <select className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">Seviyyə seçin</option>
-                  <option value="junior">Junior</option>
-                  <option value="senior">Senior</option>
-                  <option value="both">Her iki seviyyə</option>
+                <select
+                  name="level"
+                  value={filters.level}
+                  onChange={handleFilterChange}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Səviyyə seçin</option>
+                  <option value="JUNIOR">Junior</option>
+                  <option value="SENIOR">Senior</option>
+                  <option value="BOTH">Hər iki səviyyə</option>
                 </select>
-                <select className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select
+                  name="resourceType"
+                  value={filters.resourceType}
+                  onChange={handleFilterChange}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
                   <option value="">Resurs növü seçin</option>
-                  <option value="kitab">Kitab</option>
-                  <option value="test">Test/imtahan</option>
-                  <option value="video">Video dərs</option>
-                  <option value="article">Məqalə</option>
-                  <option value="other">Digər</option>
+                  <option value="BOOK">Kitab</option>
+                  <option value="PDF">PDF</option>
+                  <option value="VIDEO">Video dərs</option>
+                  <option value="TEST">Test/imtahan</option>
+                  <option value="ARTICLE">Məqalə</option>
+                  <option value="OTHER">Digər</option>
                 </select>
               </div>
             </div>
@@ -78,114 +190,159 @@ export default function ResourcesPage() {
 
           {/* Resources grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Resource cards will be populated dynamically */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 hover:border-gray-200 transition-all duration-300">
-              <div className="p-6">
-                <div className="mb-4">
-                  <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                    Kitab
-                  </span>
+            {resources.length === 0 ? (
+              <p className="text-center col-span-3 text-gray-500">
+                Heç bir resurs tapılmadı
+              </p>
+            ) : (
+              resources.map((resource) => (
+                <div key={resource.id} className="bg-white rounded-xl shadow-sm border border-gray-100 hover:border-gray-200 transition-all duration-300">
+                  <div className="p-6">
+                    <div className="mb-4">
+                      <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                        {getResourceTypeLabel(resource.resourceType)}
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                      {resource.title}
+                    </h3>
+                    <p className="text-gray-600 mb-4">
+                      {resource.description || ""}
+                    </p>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {resource.category && (
+                        <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">
+                          {getCategoryLabel(resource.category)}
+                        </span>
+                      )}
+                      {resource.level && (
+                        <span className={getLevelBadgeClass(resource.level)}>
+                          {getLevelLabel(resource.level)}
+                        </span>
+                      )}
+                      {resource.year && (
+                        <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">
+                          {resource.year}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center">
+                      <a
+                        href={resource.resourceType === "TEST" ? `/tests/${resource.id}` : `/api/resources/${resource.id}/download`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:text-blue-800 me-4"
+                      >
+                        {resource.resourceType === "TEST" ? "Testə başla" : "PDF-ni Oxu"}
+                      </a>
+                      <a
+                        href={resource.resourceType === "TEST" ? `/tests/${resource.id}` : `/api/resources/${resource.id}/download`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                      >
+                        {resource.resourceType === "TEST" ? "Testə başla" : "Yüklə"}
+                      </a>
+                    </div>
+                  </div>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                  Fizika üçün Temel Problemlər Cildi 1
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  8-9 cu siniflər üçün mexanika, molekulyar fizika və termodinamika məsələləri
-                </p>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">
-                    Mexanika
-                  </span>
-                  <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">
-                    Junior
-                  </span>
-                  <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">
-                    2024
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <a href="#" className="text-sm text-blue-600 hover:text-blue-800 me-4">
-                    PDF-ni Oxu
-                  </a>
-                  <a href="#" className="inline-flex items-center px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
-                    Yüklə
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 hover:border-gray-200 transition-all duration-300">
-              <div className="p-6">
-                <div className="mb-4">
-                  <span className="px-3 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">
-                    Test
-                  </span>
-                </div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                  2024-il RFO Fizika İmtiahanı Nümūnə Testi
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  Senior seviyyə üçün completa test və cavab variantsı
-                </p>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">
-                    Test
-                  </span>
-                  <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">
-                    Senior
-                  </span>
-                  <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">
-                    2024
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <a href="#" className="text-sm text-blue-600 hover:text-blue-800 me-4">
-                    PDF-ni Oxu
-                  </a>
-                  <a href="#" className="inline-flex items-center px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
-                    Yüklə
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 hover:border-gray-200 transition-all duration-300">
-              <div className="p-6">
-                <div className="mb-4">
-                  <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                    Video Dərs
-                  </span>
-                </div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                  Elektrostatika införوماً: Qanunlar və Təbiqələr
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  10-11 cu siniflər üçün video dərs seriyası
-                </p>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">
-                    Video
-                  </span>
-                  <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">
-                    Senior
-                  </span>
-                  <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">
-                    Elektrik
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <a href="#" className="text-sm text-blue-600 hover:text-blue-800 me-4">
-                    İzlə
-                  </a>
-                  <a href="#" className="inline-flex items-center px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
-                    Yüklə
-                  </a>
-                </div>
-              </div>
-            </div>
+              ))
+            )}
           </div>
         </div>
       </main>
+
+      <footer className="border-t border-gray-200 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="grid md:grid-cols-3 gap-8 text-center">
+            <div>
+              <h3 className="font-semibold text-gray-800 mb-4">Fizika Platformu</h3>
+              <p className="text-gray-600">
+                Azərbaycan Respublikası Fənn Olimpiadası (RFO) — Fizika hazırlığı üçün sayt
+              </p>
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-800 mb-4">Sosial şəbəkələr</h3>
+              <a
+                href="https://www.instagram.com/adminfizika/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-gray-500 transition-colors hover:text-gray-800"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3" y="3" width="18" height="18" rx="5" strokeWidth={2} />
+                  <circle cx="12" cy="12" r="4" strokeWidth={2} />
+                  <circle cx="18" cy="6" r="1" fill="currentColor" />
+                </svg>
+                <span>@adminfizika</span>
+              </a>
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-800 mb-4">Əlaqə</h3>
+              <p className="text-gray-600">
+                Zəhmət olmasa, saytda olmasını istədiyiniz əlavə şeyləri və iradlarınızı{" "}
+                <a
+                  href="https://mail.google.com/mail/?view=cm&fs=1&to=adminfizika%40gmail.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  adminfizika@gmail.com
+                </a>{" "}
+                emailinə yazaraq bildirin.
+              </p>
+              <p className="text-gray-600 mt-2">
+                Bakı, Azərbaycan
+              </p>
+            </div>
+          </div>
+          <div className="mt-8 pt-6 border-t border-gray-200 text-sm text-gray-500">
+            © 2026 Fizika Platformu. Bütün hüquqlar qorunur.
+          </div>
+        </div>
+      </footer>
     </div>
   );
+}
+
+// Helper functions
+function getResourceTypeLabel(type: string): string {
+  switch (type) {
+    case "BOOK": return "Kitab";
+    case "PDF": return "PDF";
+    case "VIDEO": return "Video dərs";
+    case "TEST": return "Test/imtahan";
+    case "ARTICLE": return "Məqalə";
+    case "OTHER": return "Digər";
+    default: return type || "-";
+  }
+}
+
+function getCategoryLabel(category: string): string {
+  switch (category) {
+    case "mexanika": return "Mexanika";
+    case "elektrik": return "Elektrik";
+    case "termodinamika": return "Termodinamika";
+    case "optika": return "Optika";
+    case "maqnetizm": return "Maqnetizm";
+    default: return category || "-";
+  }
+}
+
+function getLevelLabel(level: string): string {
+  switch (level) {
+    case "JUNIOR": return "Junior";
+    case "SENIOR": return "Senior";
+    case "BOTH": return "Hər iki səviyyə";
+    default: return level || "-";
+  }
+}
+
+function getLevelBadgeClass(level: string): string {
+  switch (level) {
+    case "JUNIOR": return "px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full";
+    case "SENIOR": return "px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full";
+    case "BOTH": return "px-3 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full";
+    default: return "px-3 py-1 bg-gray-100 text-gray-800 text-xs font-medium rounded-full";
+  }
 }

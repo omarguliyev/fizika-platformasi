@@ -1,0 +1,1 @@
+ALTER TABLE "AISettings" ADD COLUMN "provider" TEXT NOT NULL DEFAULT 'nvidia';

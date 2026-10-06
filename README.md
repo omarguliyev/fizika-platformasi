@@ -43,6 +43,22 @@ npx prisma migrate dev
 npm run dev
 ```
 
+`DATABASE_URL` bu layihədə SQLite üçün `file:./dev.db` olmalıdır. Sxem dəyişikliklərindən sonra `npx prisma migrate dev` və `npx prisma generate` əmrlərini işlədin.
+
+Production mühitində yeni migration-ları deployment zamanı `npx prisma migrate deploy` ilə tətbiq edin.
+
+### Admin hesabının qurulması və yenilənməsi
+
+Admin giriş məlumatlarını `.env` faylında `ADMIN_EMAIL` və `ADMIN_PASSWORD` altında saxlayın (`.env.example` yalnız nümunədir). Sonra `npm run admin:sync` əmri həmin e-poçt üçün hesab yaradır və ya parolu yeniləyir. Mövcud admin hesabının e-poçtunu dəyişmək lazım olduqda `ADMIN_PREVIOUS_EMAIL`-i yalnız əmri icra edərkən əvvəlki e-poçta təyin edin; skript həmin hesabı yeni e-poçta köçürür, başqa admin hesablarını silmir. Admin parolları bcrypt ilə hash olunaraq bazada saxlanılır.
+
+## Hesablar, testlər və fayl yükləmələri
+
+Şagird hesabı `/signup` səhifəsindən e-poçt, istifadəçi adı və şifrə ilə yaradılır, sonra `/login` səhifəsində açılır. Şifrələr yalnız bcrypt hash kimi saxlanılır. Admin hesabları ayrıca `Admin` cədvəlində saxlanılır və `/admin/login` səhifəsində ayrıca credentials provider ilə yoxlanılır. Admin icazəsi Next.js `proxy.ts` və admin API-lərində server tərəfində yoxlanılır. Resurs kitabxanası, Junior/Senior və RFO bölmələri, testlər, AI köməkçisi və yüklənmiş fayllara yalnız qeydiyyatdan keçib daxil olmuş istifadəçilər baxa bilər; qonaqlar qeydiyyat və giriş səhifələrindən başlaya bilərlər.
+
+Admin resurs formasında PDF, JPG, PNG, TXT və MP4 faylları yükləyə bilər. Fayllar lokal inkişaf mühitində `public/uploads` qovluğuna UUID adı ilə yazılır. `MAX_FILE_SIZE` (baytla, standart 10 MB) ölçü həddini dəyişir. Serverless deployment üçün `/api/uploads` endpoint-i obyekt saxlama provider-inə köçürülməlidir; provider credential-ları heç vaxt `NEXT_PUBLIC_*` dəyişənlərində saxlamayın.
+
+Admin `POST /api/tests` ilə `TEST` resursu və suallar yarada bilər. `SINGLE_CHOICE`, `MULTIPLE_CHOICE` (dəqiq seçim dəsti) və `OPEN_ANSWER` tipləri server tərəfində qiymətləndirilir. Tələbə cavabları `POST /api/tests/[resourceId]` ilə göndərilir, doğru cavablar brauzerə qaytarılmır və nəticə `TestAttempt`/`TestAnswer` cədvəllərində saxlanılır.
+
 ## Funksiyalar
 
 ### Şagird tərəfi
@@ -68,9 +84,9 @@ npm run dev
 
 * **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS
 * **Backend:** Next.js API Routes
-* **Verilənlər bazası:** PostgreSQL + Prisma ORM
-* **AI:** NVIDIA API
-* **Fayl saxlanması:** Lokal saxlama, gələcəkdə bulud inteqrasiyası üçün hazırlanmışdır
+* **Verilənlər bazası:** SQLite + Prisma ORM
+* **AI:** Google AI Studio (Gemini API)
+* **Fayl saxlanması:** Lokal inkişaf saxlancı (`public/uploads`)
 
 ## Layihə strukturu
 
@@ -91,6 +107,12 @@ src/
 API açarları və digər məxfi məlumatlar `.env` faylında saxlanılmalıdır və GitHub-a yüklənməməlidir.
 
 `.env.example` faylı yalnız tələb olunan environment dəyişənlərini göstərmək üçün istifadə olunur.
+
+### AI təminatçısının qurulması
+
+AI açarlarını yalnız server mühit dəyişənlərində saxlayın; onları `NEXT_PUBLIC_*` dəyişənlərinə və ya brauzer koduna yerləşdirməyin. Google AI Studio istifadə etmək üçün [AI Studio API keys](https://aistudio.google.com/apikey) səhifəsindən API açarı yaradın. Açarı yaratmazdan əvvəl **Projects** bölməsində istifadə etmək istədiyiniz Google Cloud layihəsini seçin və açarı həmin layihə üçün yaradın. Gemini Developer API sorğusunda layihə ID-si ayrıca göndərilmir; Google layihəni API açarı ilə əlaqələndirir, buna görə layihə ID-si açarı əvəz etmir. Açarı `.env` faylında `GOOGLE_API_KEY` (və ya `GEMINI_API_KEY`) dəyişəninə əlavə edin. Tətbiq hazırda **Gemini 3.1 Flash-Lite** istifadə edir, çünki bu model canlı olaraq sınaqdan keçirilib və cavab qaytarıb. `.env` dəyişəndən sonra tətbiqi yenidən başladın. Layihənin API açarı, Gemini API icazəsi və quota/billing statusu düzgün olmalıdır.
+
+Tətbiqdə NVIDIA modeli aktiv deyil. Admin AI ayarları yalnız dəstəklənən Gemini modellərini təklif edir; köhnə NVIDIA model adları artıq seçilə bilməz.
 
 ## Lisenziya
 

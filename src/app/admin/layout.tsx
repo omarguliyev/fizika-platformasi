@@ -1,3 +1,5 @@
+import { BrandLogo } from "@/components/BrandLogo"
+
 export default function AdminLayout({
   children,
 }: {
@@ -9,11 +11,7 @@ export default function AdminLayout({
       <aside className="w-64 bg-white border-r border-gray-200">
         <div className="p-6">
           <div className="flex items-center space-x-3 mb-8">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c4.418 0 8 3.582 8 8s-3.582 8-8 8-8-3.582-8-8 3.582-8 8-8zm0-2C6.477 6 2 10.477 2 16s4.477 10 10 10 10-4.477 10-10S17.523 6 12 6zm0 12c-2.21 0-4-1.79-4-4s1.79-4 4-4-1.79 4-4 4z"></path>
-              </svg>
-            </div>
+            <BrandLogo imageClassName="h-10 w-10" />
             <div>
               <h2 className="font-semibold text-gray-900">Admin Panel</h2>
               <p className="text-sm text-gray-500">RFO Fizika Platformu</p>

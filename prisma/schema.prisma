@@ -3,60 +3,151 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model Admin {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  password  String   // Hashed password
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String     @id @default(uuid())
+  email             String     @unique
+  name              String?
+  password          String // Hashed password
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  uploadedResources Resource[] @relation("UploadedByAdmin")
+
+  @@index([email])
+}
+
+model User {
+  id             String        @id @default(uuid())
+  username       String        @unique
+  email          String        @unique
+  password       String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  lastActivityAt DateTime?
+  attempts       TestAttempt[]
 
   @@index([email])
 }
 
 model Resource {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  fileUrl     String
+  id           String   @id @default(uuid())
+  title        String
+  description  String?
+  fileUrl      String?
   thumbnailUrl String?
-  category    String
-  topic       String?
-  level       String   // JUNIOR, SENIOR, BOTH
-  resourceType String   // BOOK, PDF, VIDEO, TEST, ARTICLE, OTHER
-  year        Int?     // For year-specific resources like RFO papers
-  uploadedBy  String   @relation("UploadedByAdmin", fields: [uploadedById], references: [id])
-  uploadedById String
-  tags        String[]
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  category     String
+  topic        String?
+  level        String // JUNIOR, SENIOR, BOTH
+  resourceType String // BOOK, PDF, VIDEO, TEST, ARTICLE, OTHER, PAST_PAPER
+  year         Int? // For year-specific resources like RFO papers
+  stage        String? // For past papers: e.g., "I mərhələ", "II mərhələ", "Final"
+  uploadedBy   Admin?   @relation("UploadedByAdmin", fields: [uploadedById], references: [id])
+  uploadedById String?
+  tags         String? // comma-separated tags
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  test         Test?
 
   @@index([category, level, resourceType])
   @@index([year])
+  @@index([stage])
+}
+
+model Test {
+  id           String         @id @default(uuid())
+  resourceId   String         @unique
+  resource     Resource       @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  timeLimit    Int?
+  instructions String?
+  questions    TestQuestion[]
+  attempts     TestAttempt[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model TestQuestion {
+  id              String       @id @default(uuid())
+  testId          String
+  test            Test         @relation(fields: [testId], references: [id], onDelete: Cascade)
+  text            String
+  questionType    String
+  points          Int          @default(1)
+  acceptedAnswers String?
+  tolerance       Float?
+  order           Int          @default(0)
+  options         TestOption[]
+  answers         TestAnswer[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([testId, order])
+}
+
+model TestOption {
+  id         String       @id @default(uuid())
+  questionId String
+  question   TestQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  text       String
+  isCorrect  Boolean      @default(false)
+  order      Int          @default(0)
+
+  @@index([questionId, order])
+}
+
+model TestAttempt {
+  id             String       @id @default(uuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  testId         String
+  test           Test         @relation(fields: [testId], references: [id], onDelete: Cascade)
+  score          Float
+  maxScore       Float
+  percentage     Float
+  correctCount   Int
+  incorrectCount Int
+  completedAt    DateTime     @default(now())
+  answers        TestAnswer[]
+
+  @@index([userId, completedAt])
+  @@index([testId, completedAt])
+}
+
+model TestAnswer {
+  id         String       @id @default(uuid())
+  attemptId  String
+  attempt    TestAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId String
+  question   TestQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answer     String
+  isCorrect  Boolean
+  points     Float
+
+  @@unique([attemptId, questionId])
 }
 
 model Category {
-  id   String   @id @default(uuid())
-  name String   @unique
-  type String   // TOPIC, RESOURCE_TYPE, LEVEL, etc.
+  id          String   @id @default(uuid())
+  name        String   @unique
+  type        String // TOPIC, RESOURCE_TYPE, LEVEL, etc.
   description String?
-  isActive Boolean @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model RFOYear {
-  id        String   @id @default(uuid())
-  year      Int      @unique
-  label     String   // e.g., "2025"
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String     @id @default(uuid())
+  year      Int        @unique
+  label     String // e.g., "2025"
+  files     String? // JSON array of file objects: [{name: string, url: string, type: string}]
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  stages    RFOStage[] @relation("YearStages")
 
   @@index([year])
 }
@@ -65,7 +156,7 @@ model RFOStage {
   id          String   @id @default(uuid())
   yearId      String
   year        RFOYear  @relation("YearStages", fields: [yearId], references: [id])
-  stage       String   // e.g., "I mərhələ", "II mərhələ", "Final"
+  stage       String // e.g., "I mərhələ", "II mərhələ", "Final"
   description String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -75,31 +166,45 @@ model RFOStage {
 }
 
 model AIConversation {
-  id        String   @id @default(uuid())
-  title     String?  // Auto-generated from first message or set by user
-  userId    String?  // For future student accounts
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String      @id @default(uuid())
+  title     String? // Auto-generated from first message or set by user
+  userId    String? // For future student accounts
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  messages  AIMessage[] @relation("ConversationMessages")
 
   @@index([createdAt])
 }
 
 model AIMessage {
-  id        String   @id @default(uuid())
+  id             String         @id @default(uuid())
   conversationId String
-  conversation AIConversation @relation("ConversationMessages", fields: [conversationId], references: [id])
-  content    String
-  isUser     Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  conversation   AIConversation @relation("ConversationMessages", fields: [conversationId], references: [id])
+  content        String
+  isUser         Boolean        @default(false)
+  createdAt      DateTime       @default(now())
 
   @@index([conversationId, createdAt])
 }
 
 model SearchLog {
-  id        String   @id @default(uuid())
-  query     String
+  id           String   @id @default(uuid())
+  query        String
   resultsCount Int
-  createdAt DateTime @default(now())
+  createdAt    DateTime @default(now())
 
   @@index([createdAt])
+}
+
+model AISettings {
+  id           String   @id @default(uuid())
+  provider     String   @default("google")
+  model        String   @default("gemini-3.1-flash-lite")
+  temperature  Float    @default(0.7)
+  maxTokens    Int      @default(1000)
+  systemPrompt String
+  isActive     Boolean  @default(true)
+  updatedAt    DateTime @updatedAt
+
+  @@index([isActive])
 }
