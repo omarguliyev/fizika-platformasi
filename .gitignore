@@ -20,10 +20,15 @@
 # production
 /build
 /uploads/
+/public/uploads/
 
 # misc
 .DS_Store
 *.pem
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
 
 # debug
 npm-debug.log*
